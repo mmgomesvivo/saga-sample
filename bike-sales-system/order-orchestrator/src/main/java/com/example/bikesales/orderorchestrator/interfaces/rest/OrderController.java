@@ -11,8 +11,16 @@ import org.springframework.web.bind.annotation.*; // For @RestController, @Reque
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/orders")
+@Tag(name = "Order Placement", description = "API for placing new customer orders")
 public class OrderController {
 
     private final OrderPlacementService orderPlacementService;
@@ -22,6 +30,15 @@ public class OrderController {
     }
 
     @PostMapping // Equivalent to @PostMapping("/")
+    @Operation(summary = "Place a new order", description = "Receives order details and initiates the order placement and checkout process asynchronously.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "202", description = "Order placement initiated successfully",
+                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderSummaryDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data provided for the order",
+                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderSummaryDto.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error during order placement",
+                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderSummaryDto.class)))
+    })
     public CompletableFuture<ResponseEntity<OrderSummaryDto>> placeNewOrder(@RequestBody(required = false) PlaceOrderCommand command) {
         // Using the more robust validation from the example
         if (command == null) {

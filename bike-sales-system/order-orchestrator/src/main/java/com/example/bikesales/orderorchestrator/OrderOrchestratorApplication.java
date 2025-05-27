@@ -2,6 +2,8 @@ package com.example.bikesales.orderorchestrator;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition; // Added import
+import io.swagger.v3.oas.annotations.info.Info;         // Added import
 
 // If shared configurations (like RabbitMQConfiguration from common-infrastructure)
 // or components from other base packages (like checkout.domain for BikeOrderItem)
@@ -13,6 +15,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 // For now, let's assume default component scan is sufficient for components within this service,
 // and shared beans are pulled in via auto-configuration from dependent modules.
 
+@OpenAPIDefinition(
+    info = @Info(
+        title = "Order Orchestrator API",
+        version = "v1.0.0", // Using a more specific version than just "v1"
+        description = "API for placing and managing customer orders for the Bike Sales System."
+    )
+)
 @SpringBootApplication
 public class OrderOrchestratorApplication {
 

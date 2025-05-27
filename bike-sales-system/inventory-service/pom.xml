@@ -36,10 +36,17 @@
             <version>${project.version}</version>
         </dependency>
         <!-- For specific needs like web, add spring-boot-starter-web -->
-        <!-- <dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency> -->
+            <artifactId>spring-boot-starter-web</artifactId> <!-- Needed for REST controller and OpenAPI UI -->
+        </dependency>
+        
+        <!-- Springdoc OpenAPI for API documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version> <!-- Use the same version as in order-orchestrator -->
+        </dependency>
     </dependencies>
 
     <build>
