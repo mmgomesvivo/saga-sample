@@ -4,18 +4,21 @@ import com.example.bikesales.checkout.application.steps.CreateOrderStep;
 import com.example.bikesales.checkout.application.steps.ReserveInventoryStep;
 import com.example.bikesales.checkout.application.steps.SendNotificationStep;
 import com.example.bikesales.checkout.application.steps.ValidateOrderStep;
+import com.example.bikesales.checkout.application.steps.CreateOrderStep;
+import com.example.bikesales.checkout.application.steps.ReserveInventoryStep;
+import com.example.bikesales.checkout.application.steps.SendNotificationStep;
+import com.example.bikesales.checkout.application.steps.ValidateOrderStep;
 import com.example.bikesales.checkout.domain.CheckoutCommand;
 import com.example.bikesales.checkout.domain.CheckoutContext;
-import com.example.bikesales.checkout.domain.CheckoutResult;
+// CheckoutResult is no longer returned by the primary method
 import com.example.bikesales.saga.SagaDefinition;
 import com.example.bikesales.saga.SagaOrchestrator;
 import com.example.bikesales.saga.SagaStep;
-// com.example.bikesales.domain.model.OrderId is imported by CheckoutContext,
-// and its .value().toString() is used, so no direct import needed here unless for explicit type casting.
 
+import org.springframework.amqp.rabbit.annotation.RabbitListener; // Added
 import org.springframework.stereotype.Service;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+// import java.util.concurrent.CompletableFuture; // No longer returned
 
 @Service
 public class CheckoutSagaOrchestrator {
@@ -39,25 +42,46 @@ public class CheckoutSagaOrchestrator {
         this.genericOrchestrator = genericOrchestrator;
     }
 
-    public CompletableFuture<CheckoutResult> processCheckout(CheckoutCommand command) {
-        CheckoutContext context = CheckoutContext.from(command);
-        // Using "CheckoutSaga" as the saga name, can be more dynamic if needed
-        SagaDefinition<CheckoutContext> sagaDefinition = new SagaDefinition<>("CheckoutSaga", this.sagaSteps);
+    // Old method removed or made private if needed for other purposes (e.g. testing)
+    // public CompletableFuture<CheckoutResult> processCheckout(CheckoutCommand command) { ... }
 
-        return genericOrchestrator.executeSaga(sagaDefinition, context)
-            .thenApply(sagaResult -> {
-                String orderIdStr = null;
-                // Check if order ID exists in context; it might if CreateOrderStep was reached
-                if (context.getOrderId() != null) {
-                    orderIdStr = context.getOrderId().value().toString();
-                    if (!sagaResult.success()) {
-                        // Append a marker if saga failed but order ID was generated
-                        orderIdStr += " (SagaFailed)";
+    @RabbitListener(queues = "${checkout.processing.queue.name:checkout.processing.queue}")
+    public void handleCheckoutCommand(CheckoutCommand command) {
+        if (command == null) {
+            System.err.println("CheckoutSagaOrchestrator: Received null CheckoutCommand. Ignoring.");
+            return;
+        }
+        System.out.println("CheckoutSagaOrchestrator: Received CheckoutCommand for Customer: " + command.customerId().id());
+
+        CheckoutContext context = CheckoutContext.from(command);
+        SagaDefinition<CheckoutContext> sagaDefinition = new SagaDefinition<>("CheckoutSaga", this.sagaSteps);
+        
+        System.out.println("CheckoutSagaOrchestrator: Starting SAGA execution for Customer: " + command.customerId().id());
+
+        genericOrchestrator.executeSaga(sagaDefinition, context)
+            .whenComplete((sagaResult, throwable) -> {
+                String orderIdInfo = (context.getOrderId() != null) ? context.getOrderId().value().toString() : "N/A";
+                if (throwable != null) {
+                    System.err.println("CheckoutSagaOrchestrator: Saga for Customer " + command.customerId().id() +
+                                       ", OrderID attempted: " + orderIdInfo +
+                                       " completed with an exception: " + throwable.getMessage());
+                    // Log context.getFailureReason() if it's more specific
+                    if (context.getFailureReason() != null) {
+                         System.err.println("CheckoutSagaOrchestrator: Context failure reason: " + context.getFailureReason());
+                    }
+                } else {
+                    if (sagaResult.success()) {
+                        System.out.println("CheckoutSagaOrchestrator: Checkout SAGA for Customer " + command.customerId().id() +
+                                           " completed successfully. Order ID: " + orderIdInfo);
+                        // TODO: Publish OrderSuccessfullyProcessed event or similar
+                    } else {
+                        System.err.println("CheckoutSagaOrchestrator: Checkout SAGA for Customer " + command.customerId().id() +
+                                           ", OrderID attempted: " + orderIdInfo +
+                                           " failed: " + sagaResult.message() +
+                                           (context.getFailureReason() != null ? ". Context Failure: " + context.getFailureReason() : ""));
+                        // TODO: Publish OrderProcessingFailed event or similar
                     }
                 }
-                // If saga failed and no orderId was ever set, orderIdStr remains null.
-                // If saga succeeded, orderIdStr will be the generated ID (or null if CreateOrderStep somehow didn't set it, which would be an issue).
-                return new CheckoutResult(sagaResult.success(), sagaResult.message(), orderIdStr);
             });
     }
 }

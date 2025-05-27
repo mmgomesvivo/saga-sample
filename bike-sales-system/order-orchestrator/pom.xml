@@ -12,14 +12,21 @@
     <artifactId>order-orchestrator</artifactId>
     <packaging>jar</packaging>
 
-    <name>Order Orchestrator</name>
-    <description>Service for orchestrating order sagas</description>
+    <name>Order Orchestrator Service</name>
+    <description>Service for orchestrating the order placement and fulfillment process.</description>
 
     <dependencies>
+        <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- Shared Modules -->
         <dependency>
             <groupId>com.example.bikesales</groupId>
             <artifactId>domain-events</artifactId>
@@ -27,24 +34,46 @@
         </dependency>
         <dependency>
             <groupId>com.example.bikesales</groupId>
-            <artifactId>saga-framework</artifactId>
+            <artifactId>common-infrastructure</artifactId> <!-- For RabbitMQConfiguration, etc. -->
             <version>${project.version}</version>
         </dependency>
+
+        <!-- Dependency on checkout-service for DTOs/Commands -->
+        <!-- TODO: Ideally, this would be a dependency on a checkout-service-api JAR -->
         <dependency>
             <groupId>com.example.bikesales</groupId>
-            <artifactId>common-infrastructure</artifactId>
+            <artifactId>checkout-service</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- For specific needs like web, add spring-boot-starter-web -->
-        <!-- <dependency>
+        
+        <!-- Optional: Lombok for boilerplate reduction if desired later -->
+        <!--
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        -->
+
+        <!-- Test dependencies -->
+        <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency> -->
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Build plugins will be added later -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
 </project>
